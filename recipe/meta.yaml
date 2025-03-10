@@ -12,21 +12,19 @@ source:
     - add_getopt.patch
 
 build:
-  number: 0
+  number: 1
 
 requirements:
   build:
     - {{ compiler('c') }}
+    - {{ stdlib('c') }}
     - {{ compiler('cxx') }}
     - cmake
-    # libudev is on its own in CentOS 6, packaged with systemd in CentOS 7
-    - {{ cdt('libudev-devel') }}  # [linux and cdt_name=='cos6']
-    - {{ cdt('systemd-devel') }}  # [linux and cdt_name=='cos7']
     - ninja
     - pkg-config
   host:
     - libusb
-    - pthreads-win32  # [win]
+    - winpthreads-devel  # [win]
 
 outputs:
   - name: libairspyhf
@@ -38,13 +36,12 @@ outputs:
     requirements:
       build:
         - {{ compiler('c') }}
+        - {{ stdlib('c') }}
         - cmake
         - ninja
       host:
         - libusb
-        - pthreads-win32  # [win]
-      run:
-        - pthreads-win32  # [win]
+        - winpthreads-devel  # [win]
     test:
       commands:
         # verify that headers get installed
@@ -65,6 +62,7 @@ outputs:
     requirements:
       build:
         - {{ compiler('c') }}
+        - {{ stdlib('c') }}
         - cmake
         - ninja
       host:
@@ -77,12 +75,15 @@ outputs:
         - airspyhf_lib_version
 
         # verify that the remaining executables can be run
-        {% set cmds = ["airspyhf_calibrate", "airspyhf_gpio"] %}
-        {% set cmds = cmds + ["airspyhf_info", "airspyhf_rx"] %}
-        {% for cmd in cmds %}
-        - {{ cmd }} || ec=$?; if [ $ec -gt 1 ]; then exit $ec; fi  # [not win]
-        - {{ cmd }} || if !ERRORLEVEL! LEQ 1 cmd /c "exit /b 0"  # [win]
-        {% endfor %}
+        - airspyhf_calibrate || ec=$?; if [ $ec -gt 1 ]; then exit $ec; fi  # [not win]
+        - airspyhf_gpio || ec=$?; if [ $ec -gt 1 ]; then exit $ec; fi  # [not win]
+        - airspyhf_info || ec=$?; if [ $ec -gt 1 ]; then exit $ec; fi  # [not win]
+        - airspyhf_rx || ec=$?; if [ $ec -gt 1 ]; then exit $ec; fi  # [not win]
+
+        - airspyhf_calibrate || if !ERRORLEVEL! LEQ 1 cmd /c "exit /b 0"  # [win]
+        - airspyhf_gpio || if !ERRORLEVEL! LEQ 1 cmd /c "exit /b 0"  # [win]
+        - airspyhf_info || if !ERRORLEVEL! LEQ 1 cmd /c "exit /b 0"  # [win]
+        - airspyhf_rx || if !ERRORLEVEL! LEQ 1 cmd /c "exit /b 0"  # [win]
 
         # verify that udev rule gets installed
         - test -f $PREFIX/lib/udev/rules.d/52-airspyhf.rules  # [linux]
